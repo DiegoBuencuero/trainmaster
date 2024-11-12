@@ -3,7 +3,7 @@ from django.db import models
 from decimal import Decimal, InvalidOperation
 
 
-class Atleta(models.Model):
+class Atletas(models.Model):
     nombre = models.CharField(max_length=100)
     apellido = models.CharField(max_length=100)
     fecha_nacimiento = models.DateField()
@@ -17,7 +17,7 @@ class Atleta(models.Model):
         return f"{self.nombre} {self.apellido}"
 
 class DatosCondicion(models.Model):
-    atleta = models.ForeignKey(Atleta, on_delete=models.CASCADE, related_name='datos_condicion')
+    atleta = models.ForeignKey(Atletas, on_delete=models.CASCADE, related_name='datos_condicion')
     fecha_medicion = models.DateField(auto_now_add=True)
     peso = models.DecimalField(max_digits=5, decimal_places=2)  # Ej. 70.50 kg
     altura = models.DecimalField(max_digits=5, decimal_places=2)  # Ej. 175.50 cm
@@ -48,3 +48,50 @@ class DatosCondicion(models.Model):
                 self.imc = self.peso / (altura_metros ** 2)
             except (InvalidOperation, ZeroDivisionError):
                 self.imc = None
+
+
+class TipoEntrenamiento(models.Model):
+    nombre = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.nombre
+
+class Ejercicio(models.Model):
+    nombre = models.CharField(max_length=100, unique=True)
+    tipo_entrenamiento = models.ForeignKey(TipoEntrenamiento, on_delete=models.CASCADE, related_name='ejercicios')
+
+    def __str__(self):
+        return self.nombre
+
+class PlanEntrenamiento(models.Model):
+    atleta = models.ForeignKey(Atletas, on_delete=models.CASCADE, related_name='planes_entrenamiento')
+    fecha_creacion = models.DateField(default=timezone.now)
+    fecha_validez = models.DateField()
+    tipo_entrenamiento = models.ForeignKey(TipoEntrenamiento, on_delete=models.CASCADE, related_name='planes')
+
+    def __str__(self):
+        return f"Plan de {self.atleta} - {self.tipo_entrenamiento.nombre} - {self.fecha_creacion}"
+
+class DetallePlanEntrenamiento(models.Model):
+    INTENSIDAD_CHOICES = [
+        ('baja', 'Baja'),
+        ('media', 'Media'),
+        ('alta', 'Alta'),
+        ('maxima', 'Máxima'),
+    ]
+
+    UNIDAD_REPETICION_CHOICES = [
+        ('repeticiones', 'Repeticiones'),
+        ('tiempo', 'Tiempo (segundos)'),
+        ('peso', 'Peso (kg)'),
+    ]
+
+    plan_entrenamiento = models.ForeignKey(PlanEntrenamiento, on_delete=models.CASCADE, related_name='detalles')
+    ejercicio = models.ForeignKey(Ejercicio, on_delete=models.CASCADE)
+    repeticiones = models.PositiveIntegerField()
+    unidad_repeticion = models.CharField(max_length=20, choices=UNIDAD_REPETICION_CHOICES, default='repeticiones')
+    series = models.PositiveIntegerField()
+    intensidad = models.CharField(max_length=50, choices=INTENSIDAD_CHOICES)
+
+    def __str__(self):
+        return f"{self.ejercicio.nombre} - {self.repeticiones} reps, {self.series} series"

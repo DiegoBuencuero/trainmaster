@@ -1,10 +1,18 @@
 from django import forms
-from .models import Atleta, DatosCondicion
+from .models import Atletas, DatosCondicion, DetallePlanEntrenamiento,  PlanEntrenamiento
 from django.utils import timezone
+from django.forms import ModelForm
 
-class AtletaForm(forms.ModelForm):
+
+class BaseForm(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(BaseForm, self).__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            field.widget.attrs['class'] = 'form-control'
+
+class AtletaForm(BaseForm):
     class Meta:
-        model = Atleta
+        model = Atletas
         fields = "__all__"
         widgets = {
             'fecha_nacimiento': forms.DateInput(attrs={'type': 'date'}),
@@ -16,7 +24,7 @@ class AtletaForm(forms.ModelForm):
         if 'fecha_registro' in self.fields and not self.instance.pk:
             self.fields['fecha_registro'].initial = timezone.now().date()
 
-class DatosCondicionForm(forms.ModelForm):
+class DatosCondicionForm(BaseForm):
     class Meta:
         model = DatosCondicion
         fields = [
@@ -35,3 +43,17 @@ class DatosCondicionForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['imc'].required = False  # Asegura que el campo IMC no sea requerido en el formulario
+
+        
+class PlanEntrenamientoForm(BaseForm):
+    class Meta:
+        model = PlanEntrenamiento
+        fields = ['atleta', 'fecha_validez', 'tipo_entrenamiento']
+        widgets = {
+            'fecha_validez': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+class DetallePlanEntrenamientoForm(BaseForm):
+    class Meta:
+        model = DetallePlanEntrenamiento
+        fields = ['ejercicio', 'repeticiones', 'unidad_repeticion', 'series', 'intensidad']

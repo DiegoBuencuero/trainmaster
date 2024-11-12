@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block plugin_css %}
+{% endblock %}
+
+{% block content %}
+<div class="col-lg-12 grid-margin stretch-card">
+  <div class="card-body">
+    <h4 class="card-title">Crear Plan de Entrenamiento</h4>
+    <form method="post" class="forms-sample" action="">
+      {% csrf_token %}
+      <input type="hidden" name="registro_id" id="registro_id" value="">
+
+      <!-- Datos del Atleta -->
+      <div class="section">
+        <h5 class="section-title">Datos del Atleta</h5>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="form-group row">
+              <label class="col-sm-4 col-form-label">Atleta</label>
+              <div class="col-sm-8">{{ plan_form.atleta }}</div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="form-group row">
+              <label class="col-sm-4 col-form-label">Fecha de Validez</label>
+              <div class="col-sm-8">{{ plan_form.fecha_validez }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bloques de Entrenamiento -->
+      <div id="bloques-container">
+        {% for i in "1234" %}
+          <div class="bloque-item">
+            <h5 class="section-title">Bloque {{ forloop.counter }}</h5>
+            <div class="row">
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label>Tipo de Ejercicio</label>
+                  <select class="form-control tipo-ejercicio-select" data-bloque="{{ forloop.counter }}">
+                    <option value="">Seleccione un tipo</option>
+                    {% for tipo in tipos_entrenamiento %}
+                      <option value="{{ tipo.id }}">{{ tipo.nombre }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Contenedor de filas de ejercicios para este bloque -->
+            <div class="ejercicio-rows-container">
+              <!-- Fila de Ejercicio, Repeticiones, Series, Intensidad -->
+              <div class="row ejercicio-row">
+                <div class="col-md-3">
+                  <div class="form-group">
+                    <label>Ejercicio</label>
+                    <select class="form-control ejercicio-select">
+                      <option value="">Seleccione un ejercicio</option>
+                      <!-- Opciones dinámicas a cargar -->
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-2">
+                  <div class="form-group">
+                    <label>Repeticiones</label>
+                    <input type="number" class="form-control" name="repeticiones">
+                  </div>
+                </div>
+                <div class="col-md-2">
+                  <div class="form-group">
+                    <label>Series</label>
+                    <input type="number" class="form-control" name="series">
+                  </div>
+                </div>
+                <div class="col-md-2">
+                  <div class="form-group">
+                    <label>Intensidad</label>
+                    <input type="text" class="form-control" name="intensidad">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Botones para agregar/eliminar filas de ejercicios dentro del bloque -->
+            <div class="row mt-2">
+              <div class="col-md-12 text-right">
+                <button type="button" class="btn btn-success btn-sm add-ejercicio-row">+</button>
+                <button type="button" class="btn btn-danger btn-sm remove-ejercicio-row">-</button>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <!-- Botones de Acción -->
+      <div class="row mt-3">
+        <div class="col-md-12">
+          <button type="submit" class="btn btn-primary mr-2">Guardar</button>
+          <button type="button" class="btn btn-dark" onclick="clearFormData();">Cancelar</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Clonar una nueva fila de ejercicios dentro del bloque
+    document.querySelectorAll('.add-ejercicio-row').forEach(button => {
+        button.addEventListener('click', function() {
+            const bloqueItem = this.closest('.bloque-item');
+            const ejercicioRowsContainer = bloqueItem.querySelector('.ejercicio-rows-container');
+            const newRow = ejercicioRowsContainer.querySelector('.ejercicio-row').cloneNode(true);
+
+            // Limpiar los valores de la nueva fila
+            newRow.querySelectorAll('input, select').forEach(input => input.value = '');
+
+            // Agregar la nueva fila al contenedor
+            ejercicioRowsContainer.appendChild(newRow);
+        });
+    });
+
+    // Función para eliminar la última fila de ejercicios en un bloque
+    document.querySelectorAll('.remove-ejercicio-row').forEach(button => {
+        button.addEventListener('click', function() {
+            const bloqueItem = this.closest('.bloque-item');
+            const ejercicioRowsContainer = bloqueItem.querySelector('.ejercicio-rows-container');
+            const ejercicioRows = ejercicioRowsContainer.querySelectorAll('.ejercicio-row');
+
+            // Solo eliminar si hay más de una fila
+            if (ejercicioRows.length > 1) {
+                ejercicioRows[ejercicioRows.length - 1].remove();
+            }
+        });
+    });
+
+    // AJAX para cargar ejercicios al seleccionar el tipo de entrenamiento
+    document.addEventListener("change", function(event) {
+      if (event.target.matches(".tipo-ejercicio-select")) {
+          let tipoEntrenamientoId = event.target.value;
+          let ejercicioSelect = event.target.closest(".ejercicio-row").querySelector(".ejercicio-select");
+
+          $.ajax({
+              url: "{% url 'ajax_get_ejercicios' %}",
+              data: { 'tipo_entrenamiento_id': tipoEntrenamientoId },
+              success: function(data) {
+                  ejercicioSelect.innerHTML = "<option value=''>Seleccione un ejercicio</option>";
+                  data.ejercicios.forEach(function(ejercicio) {
+                      let option = new Option(ejercicio.nombre, ejercicio.id);
+                      ejercicioSelect.add(option);
+                  });
+              },
+              error: function() {
+                  console.error("Error al cargar los ejercicios.");
+              }
+          });
+      }
+    });
+});
+</script>
+{% endblock %}
+
+{% block nav %}
+  {% include 'nav_home.html' %}
+{% endblock %}
